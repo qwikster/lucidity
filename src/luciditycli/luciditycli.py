@@ -1,4 +1,4 @@
-import configparser
+import configparser # TODO: ADD RESET SEQUENCE, ADD FORMATTERS, FINISH NEW THEME FUNCTION, DONE? TEST
 
 def test_func():
     print("hi")
@@ -13,31 +13,48 @@ class Theme:
         self.load_theme(self.current)
         
     def load_theme(self, name: str): # loads current theme into theme object's variables
-        for i in self.storage[self.current]:
-            if i == "background":
-                setattr(self, f"col_{i}", self.get_termcol(self.rgb_str_to_list(self.storage[self.current][i]), bg = True))
+        for key, value in self.storage[name].items():
+            if key == "current_theme": # breaks b/c DEFAULT propagates everywhere
+                continue
+            elif key == "background":
+                setattr(self, f"col_{key}", self.get_termcol(self.rgb_str_to_list(value), bg = True))
             else:
-                setattr(self, f"col_{i}", self.get_termcol(self.rgb_str_to_list(self.storage[self.current][i])))
+                setattr(self, f"col_{key}", self.get_termcol(self.rgb_str_to_list(value)))
     
-    def get_themes(self, name: str) -> list: # get list of theme names
-        names = self.storage.sections
-        names.pop(0) # DEFAULT
-        return names
+    def get_themes(self) -> list: # get list of theme names
+        return self.storage.sections()
     
     def get_colors(self, theme: str) -> list: # returns 2d list [[name, r, g, b], [name, r, g, b]...]
-        pass
+        result = []
+        for i in self.storage[theme]:
+            temp = [i]
+            temp.append(self.rgb_str_to_list(self.storage[theme][i]))
+            result.append(temp)
+        return result
     
-    def rgb_str_to_list(self, input: str) -> list:
-        return input.split(", ")
+    def rgb_str_to_list(self, str_in: str) -> list[int]:
+        parts = [x.strip() for x in str_in.split(",")]
+        if len(parts) != 3:
+            raise ValueError(f"Not a valid RGB string: {str_in!r}")
+        return [int(x) for x in parts]
     
-    def hex_to_rgb(self, input: str) -> list:
-        pass
+    def hex_to_rgb(self, str_in: str) -> list:
+        h = str_in.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
     
-    def get_termcol(self, input: list, bg = False) -> str: # input a rgb list
-        pass
+    def get_termcol(self, list_in: list, bg = False) -> str: # input a rgb list
+        try:
+            RGB = f"{list_in[0]};{list_in[1]};{list_in[2]}"
+        except Exception:
+            return("Malformed RGB string")
+
+        if bg:
+            return f"\x1b[48;2;{RGB}m"
+        else:
+            return f"\x1b[38;2;{RGB}m"
     
     def current_theme(self) -> list:
-        pass
+        return self.get_colors(self.current)
     
     def new_theme(self, data: list) -> None:
         '''
@@ -45,7 +62,18 @@ class Theme:
         data - 2d list [[name, r, g, b], [name, r, g, b]...]
         '''
         pass
-    
+
+    def preview(self, name: str) -> list:
+        result = []
+        for key, value in self.storage[name].items():
+            if key == "current_theme":
+                continue
+            if key == "background":
+                result.append(self.get_termcol(self.rgb_str_to_list(value), bg = True) + f"{key}")
+            else:
+                result.append(self.get_termcol(self.rgb_str_to_list(value)) + f"{key}")
+        return result
+
     def print_box_drawing(self):
         print("┌ ┬ ┐  ╔ ╦ ╗  ┏ ┳ ┓  │ ┃ ║ ")
         print("├ ┼ ┤  ╠ ╬ ╣  ┣ ╋ ┫  ─ ━ ═ ")
@@ -54,3 +82,11 @@ class Theme:
         print("╒ ╤ ╕  ╓ ╥ ╖   ╌ ╍    ╎ ╏  ")
         print("╞ ╪ ╡  ╟ ╫ ╢   ┄ ┅    ┆ ┇  ")
         print("╘ ╧ ╛  ╙ ╨ ╜   ┈ ┉    ┊ ┋  ")
+
+
+theme = Theme('example.cfg')
+prev = theme.preview("main")
+for i in prev:
+    print(i)
+
+theme.print_box_drawing()
