@@ -1,4 +1,5 @@
-import configparser # TODO: ADD RESET SEQUENCE, ADD FORMATTERS, FINISH NEW THEME FUNCTION, DONE? TEST
+import configparser # TODO: ADD FORMATTERS, DONE? TEST, NEED NEXT FUNCTIONS, VERY GOOD
+import time
 
 def test_func():
     print("hi")
@@ -20,12 +21,16 @@ class Theme:
                 setattr(self, f"col_{key}", self.get_termcol(self.rgb_str_to_list(value), bg = True))
             else:
                 setattr(self, f"col_{key}", self.get_termcol(self.rgb_str_to_list(value)))
+
+        self.col_reset = "\x1b[0m"
+        self.col_clear = "\x1b[2J \x1b[H"
     
     def get_themes(self) -> list: # get list of theme names
         return self.storage.sections()
     
     def get_colors(self, theme: str) -> list: # returns 2d list [[name, r, g, b], [name, r, g, b]...]
         result = []
+
         for i in self.storage[theme]:
             temp = [i]
             temp.append(self.rgb_str_to_list(self.storage[theme][i]))
@@ -34,6 +39,7 @@ class Theme:
     
     def rgb_str_to_list(self, str_in: str) -> list[int]:
         parts = [x.strip() for x in str_in.split(",")]
+
         if len(parts) != 3:
             raise ValueError(f"Not a valid RGB string: {str_in!r}")
         return [int(x) for x in parts]
@@ -59,12 +65,24 @@ class Theme:
     def new_theme(self, data: list) -> None:
         '''
         creates a new theme and saves it to disk
-        data - 2d list [[name, r, g, b], [name, r, g, b]...]
+        data - 2d list [name, [name, r, g, b], [name, r, g, b]...]
         '''
-        pass
+        for item in data:
+            if type(item) is str: # create entry
+                name = item
+                self.storage[name] = {}
+            else:
+                key = item[0]
+                self.storage[name][key] = f"{item[1]}, {item[2]}, {item[3]}"
+        
+        with open(self.path, 'w') as configfile:
+            self.storage.write(configfile)
+
+        self.storage.read(self.path)
 
     def preview(self, name: str) -> list:
         result = []
+
         for key, value in self.storage[name].items():
             if key == "current_theme":
                 continue
@@ -72,6 +90,7 @@ class Theme:
                 result.append(self.get_termcol(self.rgb_str_to_list(value), bg = True) + f"{key}")
             else:
                 result.append(self.get_termcol(self.rgb_str_to_list(value)) + f"{key}")
+
         return result
 
     def print_box_drawing(self):
@@ -85,8 +104,9 @@ class Theme:
 
 
 theme = Theme('example.cfg')
-prev = theme.preview("main")
+prev = theme.preview("theme_name")
 for i in prev:
     print(i)
 
-theme.print_box_drawing()
+data = ["theme_name", ["background", 64, 128, 255], ["color1", 255, 255, 255], ["test_col", 0, 0, 0]]
+theme.new_theme(data)
