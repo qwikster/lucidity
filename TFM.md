@@ -1,1 +1,4 @@
-this is the friendly manual ☺
+# the friendly manual ☺
+`pip install luciditycli`
+`from luciditycli import *`
+
