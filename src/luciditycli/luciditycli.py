@@ -32,7 +32,16 @@ class Theme:
         self.storage.read(self.path)
 
         self.current = self.storage["DEFAULT"]["current_theme"]
-        self.load_theme(self.current)
+        try:
+            self.load_theme(self.current)
+        except Exception:
+            actual_print("No path!")
+
+    def create_themefile(self, path):
+        self.storage["DEFAULT"]["current_theme"] = "standard"
+        self.storage["standard"] = {"background": "127, 127, 127", "main": "255, 255, 255"}
+        with open(path, 'w') as configfile:
+            self.storage.write(configfile)
         
     def load_theme(self, name: str): # loads current theme into theme object's variables
         for key, value in self.storage[name].items():
@@ -51,7 +60,9 @@ class Theme:
             self.storage.write(configfile)
     
     def get_themes(self) -> list: # get list of theme names
-        return self.storage.sections()
+        themelist = self.storage.sections()
+        themelist.pop("DEFAULT")
+        return themelist
     
     def get_colors(self, theme: str) -> list: # returns 2d list [[name, r, g, b], [name, r, g, b]...]
         result = []
@@ -71,7 +82,8 @@ class Theme:
     
     def hex_to_rgb(self, str_in: str) -> list:
         h = str_in.lstrip('#')
-        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        rgb = tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        return list(rgb)
     
     def get_termcol(self, list_in: list, bg = False) -> str: # input a rgb list
         try:
@@ -214,24 +226,42 @@ class Listener:
             self.toggle_listening(True)
 
 theme = Theme('example.cfg')
-prev = theme.preview("solarized")
+prev = theme.preview("name")
 for i in prev:
     print(i)
 
 print_buffer()
-# theme.new_theme({
-#     "solarized": {
-#         "title": [255, 255, 255],
-#         "text": [131, 148, 150],
-#         "error": [220, 50, 47]
-#     }
-# })
 
 listener = Listener()
 listener.arr = 0
 
-while(1):
+actual_print(theme.current_theme())
+
+while(True):
     pop = listener.pop()
     if pop is not None:
         actual_print(pop)
         listener.done()
+
+def new_theme():
+    fields = ["background", "title", "text", "error", "prompt"]
+    colors = []
+    name = listener.safe_input("Pick a name > ")
+    for i in fields:
+        colors.append(listener.safe_input(f"Pick a color for {i}s (#hex / r, g, b): "))
+    for i in colors:
+        if "#" in i:
+            colors[colors.index(i)] = theme.hex_to_rgb(i)
+        else:
+            colors[colors.index(i)] = theme.rgb_str_to_list(i)
+    theme.new_theme({
+        name: {
+            fields[0]: colors[0],
+            fields[1]: colors[1],
+            fields[2]: colors[2],
+            fields[3]: colors[3],
+            fields[4]: colors[4],
+        }
+    })
+
+new_theme()
