@@ -1,17 +1,36 @@
 import configparser # TODO: ADD FORMATTERS, DONE? TEST, NEED NEXT FUNCTIONS, VERY GOOD
 import threading
 import time
+import sys
+from queue import Queue, Empty
 
-def test_func():
-    time.sleep(0.1)
-    print("hi")
+if sys.platform.startswith("win"):
+    import msvcrt
+else:
+    import termios
+    import tty
+    import select
+
+actual_print = print
+buffer = ""
+
+def print(*v, sep = " ", end = "\n", flush = False) -> None:
+    global buffer
+    buffer += sep.join(v) + end
+    if flush:
+        print_buffer()
+
+def print_buffer():
+    global buffer
+    actual_print(buffer, end="")
+    buffer = ""
 
 class Theme:
     def __init__(self, path: str):
         self.path = path
         self.storage = configparser.ConfigParser()
         self.storage.read(self.path)
-        
+
         self.current = self.storage["DEFAULT"]["current_theme"]
         self.load_theme(self.current)
         
@@ -116,40 +135,72 @@ class Theme:
 
 class Listener:
     def __init__(self):
+        self.active = True
+        self.old_settings = ""
+        self.fd = None
+        self.uses_windows = False
+        self.listening = True
+        self.last_press = 0
+        self.arr = 0.1
+
+        self.key_queue = Queue(maxsize=0)
+
+        if sys.platform.startswith("win"):
+            self.uses_windows = True
+        
         listener_thread = threading.Thread(target=self.key_listener, args=(self.handle_key,), daemon=True)
         listener_thread.start()
         
-    def handle_key(key: str):
-        if key == "t":
-            active = False
-            theme_menu()
-            active = True
-            
-        elif key == "q":
-            global doquit # if you call sys.exit it'll just quit the listener
-            doquit = True
-            sys.exit(0)
-            
-        elif key == "u":
-            global req_user
-            active = False
-            req_user = get_user()
-            request()
-            if read(api_response.TODAY, "data.username") == f"{color.ERROR}response parser brokey":
-                print(f"{color.ERROR}Invalid user!")
-                print_buffer()
-                time.sleep(3)
-                req_user = "my"
-                request()
-            active = True
+    def handle_key(self, key: str):
+        if (time.time() - self.last_press) < self.arr:
+            return None
+        self.last_press = float(time.time())
+        self.key_queue.put(key)
+
+
+    def key_listener(self, callback):
+        if self.uses_windows:
+            while True:
+                if msvcrt.kbhit():
+                    key = msvcrt.getch().decode("utf-8", errors="ignore")
+                    callback(key)
+
         else:
-            pass # other functions might need to go here?
+            self.fd = sys.stdin.fileno()
+            self.old_settings = termios.tcgetattr(self.fd)
+            
+            try:
+                tty.setcbreak(self.fd)
+                while True:
+                    if self.listening:
+                        dr, _, _ = select.select([sys.stdin], [], [], 0.05)
+                        if dr: 
+                            key = sys.stdin.read(1)
+                            callback(key)
+
+            finally:
+                termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
+
+    def toggle_listening(self, disable: bool):
+        self.listening = disable
+
+    def pop(self): # do not forget to finish it
+        try:
+            key = self.key_queue.get_nowait()
+        except Empty:
+            pass
+        else:
+            return key
+    
+    def done(self):
+        self.key_queue.task_done()
 
 theme = Theme('example.cfg')
 prev = theme.preview("solarized")
 for i in prev:
     print(i)
 
+print_buffer()
 # theme.new_theme({
 #     "solarized": {
 #         "title": [255, 255, 255],
@@ -157,3 +208,14 @@ for i in prev:
 #         "error": [220, 50, 47]
 #     }
 # })
+
+listener = Listener()
+listener.arr = 0.1
+while(1):
+    pop = listener.pop()
+    if pop is not None:
+        print(pop)
+        listener.done()
+    if time.time() % 2 == 0:
+        print_buffer()
+
