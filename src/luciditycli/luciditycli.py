@@ -87,7 +87,7 @@ class Theme:
     def current_theme(self) -> list:
         return self.get_colors(self.current)
     
-    def new_theme(self, data: list) -> None:
+    def new_theme(self, data: dict) -> None:
         """
         Creates a new theme and saves it to disk.
         data: dict of the form
@@ -155,8 +155,10 @@ class Listener:
         if (time.time() - self.last_press) < self.arr:
             return None
         self.last_press = float(time.time())
-        self.key_queue.put(key)
-
+        try:
+            self.key_queue.put_nowait(key)
+        except Exception as e:
+            actual_print(f"couldn't put key into queue: {key}, exception: {e}")
 
     def key_listener(self, callback):
         if self.uses_windows:
@@ -175,25 +177,41 @@ class Listener:
                     if self.listening:
                         dr, _, _ = select.select([sys.stdin], [], [], 0.05)
                         if dr: 
-                            key = sys.stdin.read(1)
-                            callback(key)
+                            try:
+                                key = sys.stdin.read(1)
+                                callback(key)
+                            except Exception as e:
+                                    actual_print(f"Reading key failed: {e}")
 
             finally:
                 termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
 
-    def toggle_listening(self, disable: bool):
-        self.listening = disable
+    def toggle_listening(self, enable: bool):
+        self.listening = enable
 
     def pop(self): # do not forget to finish it
         try:
-            key = self.key_queue.get_nowait()
+            return self.key_queue.get_nowait()
         except Empty:
-            pass
-        else:
-            return key
+            return None
     
     def done(self):
-        self.key_queue.task_done()
+        try:
+            self.key_queue.task_done()
+        except ValueError:
+            actual_print("done() called without matching get() check, don't do that!!!")
+
+    def safe_input(self, prompt = "> "):
+        self.toggle_listening(False)
+    
+        if not sys.platform.startswith("win"):
+            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
+        try:
+            return input(prompt)
+        finally:
+            if not sys.platform.startswith("win"):
+                tty.setcbreak(self.fd)
+            self.toggle_listening(True)
 
 theme = Theme('example.cfg')
 prev = theme.preview("solarized")
@@ -210,12 +228,10 @@ print_buffer()
 # })
 
 listener = Listener()
-listener.arr = 0.1
+listener.arr = 0
+
 while(1):
     pop = listener.pop()
     if pop is not None:
-        print(pop)
+        actual_print(pop)
         listener.done()
-    if time.time() % 2 == 0:
-        print_buffer()
-

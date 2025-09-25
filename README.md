@@ -22,7 +22,6 @@ a fairly exhaustive feature list-
 - buffer system
 - input listening
 - hotkeys
-- more to come...
 
 - works on all terminal emulators
 
