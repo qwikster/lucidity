@@ -3,7 +3,7 @@
 
 ## Quick Start
 Let's set up a basic instance of both the theme and the listener.
-```
+```python
 theme = Theme('example.cfg')
 listener = Listener()
 ```
@@ -13,14 +13,14 @@ listener = Listener()
 
 If you haven't created a theme file, you can initialize one with `theme.create_themefile(path)`. Make sure to do this only once.
 
-The program will load your theme in to memory automatically, but you may select one with `theme.load_theme(path)`. This choice is persistent between program runs.
+The program will load your theme in to memory automatically, but you may select one with `theme.load_theme(name)`. This choice is persistent between program runs.
 
 Call `theme.get_themes()` to return a list of themes, and `theme.get_colors()` (or `theme.current_theme()`) to return a list of colors in `[[name, r, g, b], [name, r, g, b]...]`
 
 Call `theme.preview()` to get a list of strings with *the colors applied to the names*.
 
 The most complicated function: `theme.new_theme(dict)`. The data structure:
-```
+```python
 {
     "theme_name": {
         "title": [r, g, b],
@@ -30,7 +30,7 @@ The most complicated function: `theme.new_theme(dict)`. The data structure:
 }
 ```
 Here's an example of how you might construct this data:
-```
+```python
 def new_theme():
     fields = ["background", "title", "text", "error", "prompt"]
     colors = []
@@ -56,7 +56,7 @@ def new_theme():
 Note that any field named `background` will automatically be called as a background color. There is currently no way to represent placeholders for multiple, but `get_termcol()` might help.
 
 Some helpful functions:
-- `rgb_str_to_list(string)`: Return a "255, 255, 255" string as [255, 255, 255]. Useful for
+- `rgb_str_to_list(string)`: Return a "255, 255, 255" string as [255, 255, 255]. Useful for piping into `get_termcol()`
 - `get_termcol(list, bg)`: Takes a [255, 255, 255] list and returns the ASCII escape code for it. The parameter `bg` determines whether it is the terminal background color.
 - `hex_to_rgb(hex)`: Returns a hex code as an RGB list
 - `theme.print_box_drawing()` A helpful list of Unicode box drawing characters
@@ -78,10 +78,10 @@ To prevent odd behavior called by the Windows terminal, use the module's `print(
 
 The listener is active from the start. Call `listener.toggle_listening(False)` to toggle it off, or otherwise. This will allow you to use `input()` or other terminal functions.
 
-Kill the listener thread before you delete the class instance for any reason. Set `listener.quit = True`. You may reinitialize an instance by calling its `listener.__init__()`
+Kill the listener thread before you delete the class instance for any reason. Set `listener.quit = True`. You may reinitialize an instance by calling its `listener.__init__()`, but it's better to create a new instance.
 
 To set up a listener menu:
-```
+```python
 while(True):
     pop = listener.pop()
     if pop is not None:
@@ -90,7 +90,7 @@ while(True):
     if pop == "q":
         listener.done()
         listener.quit = True
-        sys.quit(0)
+        sys.exit(0)
     if pop == ...: # rest of loop logic goes here!
         listener.done()
     else:

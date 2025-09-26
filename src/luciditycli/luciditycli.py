@@ -227,19 +227,3 @@ class Listener:
             if not sys.platform.startswith("win"):
                 tty.setcbreak(self.fd)
             self.toggle_listening(True)
-
-listener = Listener()
-stop = time.time()
-while(True):
-    pop = listener.pop()
-    if pop is not None:
-        actual_print(pop)
-        listener.done()
-    if pop == "q":
-        sys.quit(0)
-    if time.time() - stop >= 10:
-        break
-
-listener.quit = True
-while(True):
-    input("test")
