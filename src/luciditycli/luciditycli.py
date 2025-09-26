@@ -154,6 +154,7 @@ class Listener:
         self.listening = True
         self.last_press = 0
         self.arr = 0.1
+        self.quit = False
 
         self.key_queue = Queue(maxsize=0)
 
@@ -186,6 +187,8 @@ class Listener:
             try:
                 tty.setcbreak(self.fd)
                 while True:
+                    if self.quit:
+                        sys.exit(0)
                     if self.listening:
                         dr, _, _ = select.select([sys.stdin], [], [], 0.05)
                         if dr: 
@@ -225,43 +228,18 @@ class Listener:
                 tty.setcbreak(self.fd)
             self.toggle_listening(True)
 
-theme = Theme('example.cfg')
-prev = theme.preview("name")
-for i in prev:
-    print(i)
-
-print_buffer()
-
 listener = Listener()
-listener.arr = 0
-
-actual_print(theme.current_theme())
-
+stop = time.time()
 while(True):
     pop = listener.pop()
     if pop is not None:
         actual_print(pop)
         listener.done()
+    if pop == "q":
+        sys.quit(0)
+    if time.time() - stop >= 10:
+        break
 
-def new_theme():
-    fields = ["background", "title", "text", "error", "prompt"]
-    colors = []
-    name = listener.safe_input("Pick a name > ")
-    for i in fields:
-        colors.append(listener.safe_input(f"Pick a color for {i}s (#hex / r, g, b): "))
-    for i in colors:
-        if "#" in i:
-            colors[colors.index(i)] = theme.hex_to_rgb(i)
-        else:
-            colors[colors.index(i)] = theme.rgb_str_to_list(i)
-    theme.new_theme({
-        name: {
-            fields[0]: colors[0],
-            fields[1]: colors[1],
-            fields[2]: colors[2],
-            fields[3]: colors[3],
-            fields[4]: colors[4],
-        }
-    })
-
-new_theme()
+listener.quit = True
+while(True):
+    input("test")
