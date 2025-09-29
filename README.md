@@ -3,7 +3,7 @@
 > the clarity of intelligence in a piece of work
 
 > [!IMPORTANT]
-> This repository contains both Lucidity and a demo making use of it. You must install Lucidity as a library to use the demo. view the demo's readme [here](demo.md)
+> This repository contains ONLY THE MODULE! You must install Lucidity as a library to use the demo!! View the demo [here](https://github.com/qwikster/liminity). NOTE: The demo program is almost entirely AI generated!! This should not be your judgement!! READ THIS SCRIPT
 
 
 ## what?
