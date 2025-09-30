@@ -188,6 +188,8 @@ class Listener:
                 tty.setcbreak(self.fd)
                 while True:
                     if self.quit:
+                        termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
+                        actual_print("\x1b[0m")
                         sys.exit(0)
                     if self.listening:
                         dr, _, _ = select.select([sys.stdin], [], [], 0.05)
